@@ -1,0 +1,26 @@
+# Local agent workspace
+.gg/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Personal data and backups — never commit
+/backups/
+/exports/
+*.getitdone.json
+*.pdf
+
+# Dependencies and build output
+node_modules/
+.svelte-kit/
+build/
+dist/
+coverage/
+test-results/
+playwright-report/
+
+# OS / editor
+.DS_Store
+*.log
