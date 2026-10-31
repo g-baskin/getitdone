@@ -24,3 +24,10 @@ playwright-report/
 # OS / editor
 .DS_Store
 *.log
+
+# SvelteKit / Vite / Playwright
+.output/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+blob-report/
+playwright/.cache/
