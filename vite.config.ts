@@ -18,6 +18,11 @@ export default defineConfig({
 					'default-src': ['self'],
 					'script-src': ['self'],
 					'style-src': ['self'],
+					// Only SvelteKit's route announcer style; the network e2e test fails if this hash goes stale.
+					'style-src-attr': [
+						'unsafe-hashes',
+						'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='
+					],
 					'img-src': ['self', 'data:', 'blob:'],
 					'font-src': ['self'],
 					'connect-src': ['self'],

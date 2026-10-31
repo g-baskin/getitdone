@@ -17,6 +17,11 @@ const ROUTES = [
 test('no network requests beyond the app’s own files', async ({ page }) => {
 	await stubPrint(page);
 	const requests = trackRequests(page);
+	const consoleErrors: string[] = [];
+	page.on('console', (msg) => {
+		if (msg.type() === 'error') consoleErrors.push(msg.text());
+	});
+	page.on('pageerror', (err) => consoleErrors.push(err.message));
 	await loadDemo(page);
 	for (const route of ROUTES) {
 		await page.goto(route);
@@ -32,6 +37,8 @@ test('no network requests beyond the app’s own files', async ({ page }) => {
 	]);
 	await page.waitForLoadState('networkidle');
 
+	// Also proves the strict CSP never blocks the app's own scripts or styles.
+	expect(consoleErrors).toEqual([]);
 	expect(requests.all.length).toBeGreaterThan(0);
 	expect(requests.external).toEqual([]);
 	for (const url of requests.all) {
