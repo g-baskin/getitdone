@@ -1,0 +1,21 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Build and test output
+/build/
+/.svelte-kit/
+/test-results/
+/playwright-report/
+
+# Local agent folder
+/.gg/
+
+# Miscellaneous
+/static/
+
+# Planning docs keep their own formatting
+*.md
