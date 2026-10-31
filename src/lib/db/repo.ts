@@ -8,7 +8,7 @@ import {
 	moveStep as planMove
 } from '../rules/goal.ts';
 import { shouldAskAboutYesterday, unfinishedOneThing } from '../rules/morning.ts';
-import { newDailyPage } from '../rules/pages.ts';
+import { newDailyPage, setOneThingDone } from '../rules/pages.ts';
 import {
 	activateProject as planActivation,
 	addParked,
@@ -23,6 +23,7 @@ import { startWeeklyReview, syncParkedDecisions } from '../rules/weekly.ts';
 import type {
 	Blocker,
 	DailyPage,
+	Evening,
 	Goal,
 	ISODate,
 	OneThing,
@@ -65,13 +66,39 @@ export async function loadDay(date: ISODate, d: GetItDoneDB = db): Promise<DayDr
 	return { page: structuredClone(page), exists: Boolean(stored), previous, askAbout };
 }
 
-/** Saves the page and keeps its evening win in the Proof Log in step, atomically. */
-export async function savePage(page: DailyPage, d: GetItDoneDB = db): Promise<void> {
+/** Writes a page and keeps its evening win in the Proof Log in step. Call inside a transaction. */
+async function writePage(page: DailyPage, d: GetItDoneDB): Promise<void> {
 	const change = eveningWinChange(page);
+	await d.pages.put(page);
+	if ('put' in change) await d.wins.put(change.put);
+	else await d.wins.delete(change.remove);
+}
+
+/** Saves the whole page (the Today screen edits every field), atomically with its Proof Log entry. */
+export async function savePage(page: DailyPage, d: GetItDoneDB = db): Promise<void> {
+	await d.transaction('rw', d.pages, d.wins, () => writePage(page, d));
+}
+
+/** Saves the morning's choices; energy (focus blocks may have been added meanwhile) is kept as stored. */
+export async function saveMorning(draft: DailyPage, d: GetItDoneDB = db): Promise<void> {
 	await d.transaction('rw', d.pages, d.wins, async () => {
-		await d.pages.put(page);
-		if ('put' in change) await d.wins.put(change.put);
-		else await d.wins.delete(change.remove);
+		const stored = await d.pages.get(draft.date);
+		await writePage(stored ? { ...draft, energy: stored.energy } : draft, d);
+	});
+}
+
+/** Saves only the evening check-in, leaving the rest of the stored page untouched. */
+export async function saveEvening(
+	date: ISODate,
+	evening: Evening,
+	didOneThing: boolean | undefined,
+	d: GetItDoneDB = db
+): Promise<void> {
+	await d.transaction('rw', d.pages, d.wins, async () => {
+		const stored = (await d.pages.get(date)) ?? newDailyPage(date, await getPreviousPage(date, d));
+		let page: DailyPage = { ...stored, evening: { ...evening, didOneThing } };
+		if (didOneThing !== undefined) page = setOneThingDone(page, didOneThing);
+		await writePage(page, d);
 	});
 }
 

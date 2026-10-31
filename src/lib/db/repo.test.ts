@@ -14,6 +14,8 @@ import {
 	loadDay,
 	loadReview,
 	resolveBlocker,
+	saveEvening,
+	saveMorning,
 	savePage,
 	setStepStatus,
 	setWaitingStatus
@@ -154,5 +156,32 @@ describe('new weekly review', () => {
 		expect(exists).toBe(false);
 		expect(review.parkedDecisions.map((d) => d.projectId)).toEqual(['demo-project-4']);
 		expect(review.topWins[0]).toBe('Chose Nebula Teal for the walls');
+	});
+});
+
+describe('saving one part of the day keeps the rest', () => {
+	it('the evening check-in keeps focus blocks added while it was open', async () => {
+		const page = emptyDailyPage(TODAY);
+		page.oneThing.text = 'Fix the hinge';
+		await savePage(page);
+		const evening = await loadDay(TODAY);
+		await addFocusBlock(TODAY);
+		await saveEvening(TODAY, { ...evening.page.evening, win: 'Hinge fixed' }, true);
+		const stored = await db.pages.get(TODAY);
+		expect(stored?.energy.focusBlocks).toBe(1);
+		expect(stored?.oneThing).toMatchObject({ text: 'Fix the hinge', done: true });
+		expect(stored?.evening).toMatchObject({ win: 'Hinge fixed', didOneThing: true });
+		expect(await db.wins.get(`evening-${TODAY}`)).toMatchObject({ text: 'Hinge fixed' });
+	});
+
+	it('finishing the morning keeps focus blocks added while it was open', async () => {
+		const draft = (await loadDay(TODAY)).page;
+		await addFocusBlock(TODAY);
+		await addFocusBlock(TODAY);
+		draft.oneThing.text = 'Paint the sign';
+		await saveMorning(draft);
+		const stored = await db.pages.get(TODAY);
+		expect(stored?.energy.focusBlocks).toBe(2);
+		expect(stored?.oneThing.text).toBe('Paint the sign');
 	});
 });
