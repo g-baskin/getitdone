@@ -16,3 +16,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Planning docs keep their own formatting
+*.md
